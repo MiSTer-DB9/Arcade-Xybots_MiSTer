@@ -6,7 +6,7 @@
 //  whole game: the SP-313 main board, the SYNGEN raster and video pipeline,
 //  the motion-object engine and the JSA I audio PCB.  Everything here is
 //  framework wiring — PLL clocks, hps_io (ROM download + controls), the /SW
-//  bit assembly, the analog-alignment stage, arcade_video, audio and the SDRAM
+//  bit assembly, the CRT Adjust stage, arcade_video, audio and the SDRAM
 //  chip pins.
 //
 //  Xybots runs on a HORIZONTAL monitor (MAME ROT0), so there is no rotation:
@@ -70,18 +70,32 @@ localparam CONF_STR = {
 	"O[4],Orientation,Original,Flip;",
 	"O[22:20],Scale,Normal,V-Integer,HV-Integer,Narrower HV-Integer;",
 	"-;",
-	// Analog alignment (CRT H-Size / H-Position, VGA H-Shift / V-Shift), the same
-	// page as the Arcade-Toobin_MiSTer and Arcade-Klax_MiSTer cores.  Every
-	// field is plain two's complement,
-	// so the list is 0,+1..+max then -min..-1 and the decode is a $signed() --
-	// see rtl/video/xybots_analog_adjust.sv.  None of these touch the core's
-	// timing; the stage sits between xybots_core and arcade_video.
-	"P1,Analog alignment;",
+	// CRT Adjust: rmonic79's MiSTer-CRT-Adjust engine (rtl/video/crt_adjust.sv)
+	// behind an On/Off, with three amounts: CRT H-Size, CRT H-Position and CRT
+	// V-Shift.  H-Position is built as a content shift (the engine can also
+	// build it as a sync shift; which one is compiled in is set by crt_adjust's
+	// HPOS_MODE, and the reasoning for this raster is in
+	// rtl/video/xybots_analog_adjust.sv).
+	//
+	// Every amount is plain two's complement, so the list is 0,+1..+max then
+	// -min..-1 and the decode is a $signed().  None of these touch the core's
+	// timing; the stage sits between xybots_core and arcade_video.  Off is a
+	// bit-exact bypass, so HDMI is untouched unless the user turns it On.
+	//
+	// The page lives on status[82:64], bits no earlier build used: the old
+	// "Analog alignment" page held status[46:23], so a config saved before this
+	// page decodes here as Off at all-zeros instead of switching the stage On
+	// with leftover values.  status[46:23] is free again.
+	//
+	// H1 hides the three amounts while the stage is inactive, which includes the
+	// case where the framework has forced the scandoubler and the stage gates
+	// itself off (see `crt_enable`).
+	"P1,CRT Adjust;",
 	"P1-;",
-	"P1O[27:23],CRT H-Size,0,+1,+2,+3,+4,+5,+6,+7,+8,+9,+10,+11,+12,+13,+14,+15,-16,-15,-14,-13,-12,-11,-10,-9,-8,-7,-6,-5,-4,-3,-2,-1;",
-	"P1O[34:28],CRT H-Position,0,+1,+2,+3,+4,+5,+6,+7,+8,+9,+10,+11,+12,+13,+14,+15,+16,+17,+18,+19,+20,+21,+22,+23,+24,+25,+26,+27,+28,+29,+30,+31,+32,+33,+34,+35,+36,+37,+38,+39,+40,+41,+42,+43,+44,+45,+46,+47,+48,+49,+50,+51,+52,+53,+54,+55,+56,+57,+58,+59,+60,+61,+62,+63,-64,-63,-62,-61,-60,-59,-58,-57,-56,-55,-54,-53,-52,-51,-50,-49,-48,-47,-46,-45,-44,-43,-42,-41,-40,-39,-38,-37,-36,-35,-34,-33,-32,-31,-30,-29,-28,-27,-26,-25,-24,-23,-22,-21,-20,-19,-18,-17,-16,-15,-14,-13,-12,-11,-10,-9,-8,-7,-6,-5,-4,-3,-2,-1;",
-	"P1O[40:35],Analog VGA H-Shift,0,+1,+2,+3,+4,+5,+6,+7,+8,+9,+10,+11,+12,+13,+14,+15,+16,+17,+18,+19,+20,+21,+22,+23,+24,+25,+26,+27,+28,+29,+30,+31,-32,-31,-30,-29,-28,-27,-26,-25,-24,-23,-22,-21,-20,-19,-18,-17,-16,-15,-14,-13,-12,-11,-10,-9,-8,-7,-6,-5,-4,-3,-2,-1;",
-	"P1O[46:41],Analog VGA V-Shift,0,+1,+2,+3,+4,+5,+6,+7,+8,+9,+10,+11,+12,+13,+14,+15,+16,+17,+18,+19,+20,+21,+22,+23,+24,+25,+26,+27,+28,+29,+30,+31,-32,-31,-30,-29,-28,-27,-26,-25,-24,-23,-22,-21,-20,-19,-18,-17,-16,-15,-14,-13,-12,-11,-10,-9,-8,-7,-6,-5,-4,-3,-2,-1;",
+	"P1O[64],CRT Adjust,Off,On;",
+	"H1P1O[69:65],CRT H-Size,0,+1,+2,+3,+4,+5,+6,+7,+8,+9,+10,+11,+12,+13,+14,+15,-16,-15,-14,-13,-12,-11,-10,-9,-8,-7,-6,-5,-4,-3,-2,-1;",
+	"H1P1O[76:70],CRT H-Position,0,+1,+2,+3,+4,+5,+6,+7,+8,+9,+10,+11,+12,+13,+14,+15,+16,+17,+18,+19,+20,+21,+22,+23,+24,+25,+26,+27,+28,+29,+30,+31,+32,+33,+34,+35,+36,+37,+38,+39,+40,+41,+42,+43,+44,+45,+46,+47,+48,+49,+50,+51,+52,+53,+54,+55,+56,+57,+58,+59,+60,+61,+62,+63,-64,-63,-62,-61,-60,-59,-58,-57,-56,-55,-54,-53,-52,-51,-50,-49,-48,-47,-46,-45,-44,-43,-42,-41,-40,-39,-38,-37,-36,-35,-34,-33,-32,-31,-30,-29,-28,-27,-26,-25,-24,-23,-22,-21,-20,-19,-18,-17,-16,-15,-14,-13,-12,-11,-10,-9,-8,-7,-6,-5,-4,-3,-2,-1;",
+	"H1P1O[82:77],CRT V-Shift,0,+1,+2,+3,+4,+5,+6,+7,+8,+9,+10,+11,+12,+13,+14,+15,+16,+17,+18,+19,+20,+21,+22,+23,+24,+25,+26,+27,+28,+29,+30,+31,-32,-31,-30,-29,-28,-27,-26,-25,-24,-23,-22,-21,-20,-19,-18,-17,-16,-15,-14,-13,-12,-11,-10,-9,-8,-7,-6,-5,-4,-3,-2,-1;",
 	"-;",
 	// No DIP page.  Xybots has NO dip switches: MAME's INPUT_PORTS_START(xybots)
 	// has only the 0x806100 control word and the 0x806200 service/status word,
@@ -120,6 +134,13 @@ wire  [7:0] ioctl_upload_index, ioctl_din;
 
 wire [31:0] joystick_0, joystick_1;
 
+// CRT Adjust master enable.  Declared here because status_menumask below reads
+// it; what it means is documented at the stage itself (VIDEO section).  The
+// forced-scandoubler term is upstream's own integration rule: the read-rate
+// base assumes the native 15 kHz pixel-CE ratio, and once the framework has
+// doubled the line rate there is no analog CRT geometry left to fit anyway.
+wire crt_enable = status[64] & ~forced_scandoubler;
+
 hps_io #(.CONF_STR(CONF_STR)) hps_io
 (
 	.clk_sys(clk_sys),
@@ -132,7 +153,11 @@ hps_io #(.CONF_STR(CONF_STR)) hps_io
 
 	.buttons(buttons),
 	.status(status),
-	.status_menumask(16'd0),
+	// H1 = "hide while set": hide the three CRT Adjust amounts whenever the
+	// stage is not actually doing anything.  `crt_enable` is the same signal
+	// the stage itself runs on, so the menu never offers a control that is
+	// being ignored.
+	.status_menumask({14'd0, ~crt_enable, 1'b0}),
 
 	.ioctl_download(ioctl_download),
 	.ioctl_wr(ioctl_wr),
@@ -254,22 +279,30 @@ assign AUDIO_R = aud_r;
 
 ///////////////////////   VIDEO   ////////////////////////////////
 
-// Analog alignment (CRT H-Size / H-Position, VGA H-Shift / V-Shift).  Placed
-// ahead of arcade_video so the mixer, scandoubler and video_freak all see the
-// adjusted raster.  With H-Size active the output pixel rate is no longer
-// ce_pix, which is why arcade_video is clocked from adj_ce rather than ce_pix.
-// At the zero settings the stage is a bit-exact bypass.
+// CRT Adjust (H-Size / H-Position / V-Shift, rtl/video/xybots_analog_adjust.sv
+// around the vendored crt_adjust engine).  Placed ahead of arcade_video so the
+// mixer, scandoubler and video_freak all see the adjusted raster.  While On the
+// output pixel rate is the stage's own read rate, not ce_pix, which is why
+// arcade_video is clocked from adj_ce rather than ce_pix.  Off is a bit-exact
+// bypass.  `crt_enable` is declared with the hps_io wires because
+// status_menumask reads it.
 wire [7:0] adj_r, adj_g, adj_b;
 wire       adj_hs, adj_vs, adj_hb, adj_vb, adj_ce;
 
-xybots_analog_adjust #(.H_TOTAL(456), .V_TOTAL(263), .CLK_PER_PIX(8)) u_analog_adjust
+xybots_analog_adjust #(
+	.H_TOTAL    (456),
+	.V_TOTAL    (263),
+	.CLK_PER_PIX(8),
+	.HPOS_MODE  (1),     // CONTENTSHIFT; 0 (SYNCSHIFT) is the fallback, see the module
+	.AW         (11)
+) u_analog_adjust
 (
 	.clk        (clk_sys),
 	.ce_pix     (ce_pix),
-	.osd_hsize  (status[27:23]),
-	.osd_hpos   (status[34:28]),
-	.osd_hshift (status[40:35]),
-	.osd_vshift (status[46:41]),
+	.osd_on     (crt_enable),
+	.osd_hsize  (status[69:65]),
+	.osd_hpos   (status[76:70]),
+	.osd_vshift (status[82:77]),
 	.r_in(core_r), .g_in(core_g), .b_in(core_b),
 	.hs_in(core_hs), .vs_in(core_vs), .hb_in(core_hb), .vb_in(core_vb),
 	.r_out(adj_r), .g_out(adj_g), .b_out(adj_b),
