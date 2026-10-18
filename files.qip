@@ -125,8 +125,9 @@ set_global_assignment -name SYSTEMVERILOG_FILE rtl/video/xybots_gpc.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/video/xybots_cram.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/video/xybots_dac.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/video/xybots_video.sv
-# Analog-output alignment (CRT H-Size / H-Position, VGA H/V-Shift), outside the core
-set_global_assignment -name SYSTEMVERILOG_FILE rtl/video/analog_hsize.sv
+# CRT Adjust (H-Size / H-Position / V-Shift), outside the core: rmonic79's
+# MiSTer-CRT-Adjust engine c682de9 (GPL-3.0-or-later) and this core's glue
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/video/crt_adjust.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/video/xybots_analog_adjust.sv
 
 # SP-313 sheets 5, 6 and 8 — the motion-object engine.  xybots_mo is a SIBLING

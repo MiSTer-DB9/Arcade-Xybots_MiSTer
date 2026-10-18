@@ -98,13 +98,18 @@ silent. The freeze starts and ends on a frame boundary, so the game resumes on
 the same scanline and clock phase it stopped on and cannot tell it was paused.
 Turn it Off to let the game run on behind the menu.
 
-The OSD also offers Aspect ratio, Orientation (Original / Flip) and Scale, and an
-**Analog alignment** page — CRT H-Size, CRT H-Position, Analog VGA H-Shift and
-V-Shift, the same four controls as the [Arcade-Toobin_MiSTer](https://github.com/MiSTer-devel/Arcade-Toobin_MiSTer) and [Arcade-Klax_MiSTer](https://github.com/MiSTer-devel/Arcade-Klax_MiSTer) cores — for centring
-and sizing the picture on an analog CRT. The page acts on the output side only
-(`rtl/video/xybots_analog_adjust.sv`): the native 456 x 263 raster, the 7.159 MHz
-dot clock and the 59.695 Hz refresh are untouched, and at the zero settings the
-stage is a bit-exact bypass, so the default picture is the hardware-validated one.
+The OSD also offers Aspect ratio, Orientation (Original / Flip) and Scale, and a
+**CRT Adjust** page for centring and sizing the picture on an analog CRT: an
+On/Off switch and, while it is On, CRT H-Size, CRT H-Position and CRT V-Shift.
+It is rmonic79's [MiSTer-CRT-Adjust](https://github.com/rmonic79/MiSTer-CRT-Adjust)
+engine (`rtl/video/crt_adjust.sv`, glue in `rtl/video/xybots_analog_adjust.sv`)
+and acts on the output side only: the native 456 x 263 raster, the 7.159 MHz dot
+clock and the 59.695 Hz refresh are untouched, and HSync never moves, so the
+monitor keeps its lock. Off (the default) is a bit-exact bypass, so the default
+picture is the hardware-validated one; the stage also stays off whenever the
+framework forces the scandoubler. H-Position has 32 pixels of room to the right
+at H-Size 0: beyond that, or when enlarging, the right-hand columns run off the
+end of the line, and a negative H-Position brings them back.
 
 ## Hardware baseline
 
@@ -131,11 +136,11 @@ PCBs is an integer division of `clk_sys`. There are no fractional enables
 anywhere.
 
 Resource use on the DE10-Nano's Cyclone V (`5CSEBA6U23I7`), for the newest
-bitstream in `releases/`: **14,659 / 41,910 ALMs (35 %)**, 400 / 553 M10K blocks
+bitstream in `releases/`: **14,615 / 41,910 ALMs (35 %)**, 400 / 553 M10K blocks
 (72 %), 3.1 / 5.7 Mbit of block memory (55 %), 52 / 112 DSP blocks. Quartus
 17.0.2 with multi-corner analysis on: **every slack entry positive, TNS 0.000 on
 every clock and every check** (setup, hold, recovery, removal) across all 144
-corner entries, worst hold +0.080 ns on the core PLL at the fast −40 °C corner.
+corner entries, worst hold +0.074 ns on the core PLL at the fast −40 °C corner.
 
 ## Accuracy and verification
 
@@ -301,14 +306,14 @@ preserved; `NOTICE.md` is the authoritative list.
 | --- | --- | --- |
 | MiSTer framework (`sys/`) | Till Harbaum, Alexey Melnikov (sorgelig) and MiSTer-devel contributors | GPL-2.0-or-later / GPL-3.0-or-later per file |
 | fx68k (cycle-exact 68000, the main CPU) | Jorge Cwik (ijor), <https://github.com/ijor/fx68k> | GPL-3.0-or-later |
-| analog_hsize (CRT H-Size / H-Position resampler) | Umberto Parisi (rmonic79), Arcade-Raiden_MiSTer | GPL-3.0-or-later |
+| crt_adjust (CRT Adjust: H-Size / H-Position / V-Shift), MiSTer-CRT-Adjust `c682de9` | Umberto Parisi (rmonic79), <https://github.com/rmonic79/MiSTer-CRT-Adjust> | GPL-3.0-or-later |
 | T65 (6502) | Daniel Wallner, with fixes by Mike Johnson, Wolfgang Scherr and Morten Leikvoll (OpenCores / FPGAArcade) | BSD-style, three clauses |
 | jt51 (YM2151) | Jose Tejada (jotego) | GPL-3.0-or-later |
 | Altera/Intel PLL megafunction | Intel Corporation (generated IP) | Intel FPGA IP licence, as generated |
 
-The T65, jt51, SDRAM and JSA I building blocks, the MiSTer glue, the analog
-alignment stage and the verification methodology come from the [Arcade-Toobin_MiSTer](https://github.com/MiSTer-devel/Arcade-Toobin_MiSTer)
-core; the analog alignment page matches the one in [Arcade-Klax_MiSTer](https://github.com/MiSTer-devel/Arcade-Klax_MiSTer). The SYNGEN and
+The T65, jt51, SDRAM and JSA I building blocks, the MiSTer glue and the
+verification methodology come from the [Arcade-Toobin_MiSTer](https://github.com/MiSTer-devel/Arcade-Toobin_MiSTer)
+core; the CRT Adjust page is rmonic79's [MiSTer-CRT-Adjust](https://github.com/rmonic79/MiSTer-CRT-Adjust). The SYNGEN and
 line-buffer behaviour was cross-checked against d18c7db's [Arcade-Gauntlet_MiSTer](https://github.com/MiSTer-devel/Arcade-Gauntlet_MiSTer) core,
 which models the same Atari customs. The SLAPSTIC is *not* derived from those
 cores: it was written from SP-313 sheet 2 and verified against MAME's state
